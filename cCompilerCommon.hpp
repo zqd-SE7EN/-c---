@@ -6,12 +6,20 @@
 #include<math.h>
 #include<string.h>
 #include<string>
+#include<sstream>
 #include<iostream>
 #include<vector>
 #include<map>
 #include<cstdarg>
-
+#include<cassert>
+class SymbolTableStack;
+class SymbolTable;
+class VariableDeclarationNode;
+class VariableDeclarationStatementNode;
 struct Attribute;
+extern int csLineCnt;
+extern int csColumnCnt;
+extern SymbolTableStack *symbolTableStack;
 
 class NameCounter{
 private:
@@ -23,6 +31,35 @@ public:
             map.insert({name,0});
         }
         return name+"["+std::to_string(map[name]++)+"]";
+    }
+};
+
+class AddressCounter{
+private:
+    int addr;
+public:
+    AddressCounter():addr(0){}
+    int getNextAddr(){
+        return addr++;
+    }
+    int getNextNAddr(int n){
+        int t = addr;
+        addr += n;
+        return t;
+    }
+};
+extern AddressCounter* addressCounter;
+struct Tuple4{
+    std::string op, sa1, sa2, da;
+};
+class Memory{
+public:
+    std::vector<Tuple4> mmemory;
+    void load(int addr, Tuple4 t){
+        while(mmemory.size()<addr){
+            mmemory.push_back({"var","","",""});
+        }
+        mmemory.push_back(t);
     }
 };
 
@@ -41,6 +78,7 @@ protected:
     bool mIsNegligible;
     std::vector<Node*> mChildren;
 public:
+    Node(){};
     Node(std::string _symbolName, int childrenNumber, ...):mIsNegligible(false),mSymbolName(_symbolName),mIsTerminal(false),mTokenValue("I am not a terminal."){
         va_list vl;
         va_start(vl, childrenNumber);
@@ -55,10 +93,14 @@ public:
         mChildren.push_back(newChild);
     }
     Node* getChildrenById(int i){
+        if(i>=mChildren.size())return NULL;
         return mChildren[i];
     }
     int getChildrenNumber(){
         return mChildren.size();
+    }
+    std::vector<Node*> getChildren(){
+        return mChildren;
     }
     bool isTerminal()const{
         return mIsTerminal;
@@ -105,28 +147,36 @@ public:
     
 
 public:
-    virtual void setType(Node::Type _type){}
-    virtual void setType(Node* c){}
-    virtual Node::Type getType(){}
-    virtual std::string getTypeString(){}
-    virtual void setKind(Node::Kind _kind){}
-    virtual Node::Kind getKind(){}
-    virtual void setArgList(std::vector<Node::Type> _argList){}
-    virtual std::vector<Node::Type> getArgList(){}
-    virtual void setArgListStructName(std::vector<std::string> _structName){}
-    virtual std::vector<std::string> getArgListStructName(){}
-    virtual void setArraySizes(std::vector<int> _sizes){}
-    virtual std::vector<int> getArraySizes(){}
-    virtual bool isArray(){}
-    virtual int getArrayDimension(){}
-    virtual void setStructTypeName(std::string _name){}
-    virtual std::string getStructTypeName(){}
-    virtual void setVariableName(std::string _name){}
-    virtual std::string getVariableName(){}
-    virtual void setPosition(int l,int c){}
-    virtual void setPosition(Node*){}
+    virtual std::string codeGen(){
+        for(auto i : mChildren){
+            std::cout<<i->getName()<<" codeGen begin\n";
+            i->codeGen();
+            std::cout<<i->getName()<<" codeGen finished\n";
+        }
+        return "`";
+    }
+    virtual void setType(Node::Type _type){std::cout<<"wrong\n";}
+    virtual void setType(Node* c){std::cout<<"wrong\n";}
+    virtual Node::Type getType(){std::cout<<"wrong\n";}
+    virtual std::string getTypeString(){std::cout<<"wrong\n";}
+    virtual void setKind(Node::Kind _kind){std::cout<<"wrong\n";}
+    virtual Node::Kind getKind(){std::cout<<"wrong\n";}
+    virtual void setArgList(std::vector<Node::Type> _argList){std::cout<<"wrong\n";}
+    virtual std::vector<Node::Type> getArgList(){std::cout<<"wrong\n";}
+    virtual void setArgListStructName(std::vector<std::string> _structName){std::cout<<"wrong\n";}
+    virtual std::vector<std::string> getArgListStructName(){std::cout<<"wrong\n";}
+    virtual void setArraySizes(std::vector<int> _sizes){std::cout<<"wrong\n";}
+    virtual std::vector<int> getArraySizes(){std::cout<<"wrong\n";}
+    virtual bool isArray(){std::cout<<"wrong\n";}
+    virtual int getArrayDimension(){std::cout<<"wrong\n";}
+    virtual void setStructTypeName(std::string _name){std::cout<<"wrong\n";}
+    virtual std::string getStructTypeName(){std::cout<<"wrong\n";}
+    virtual void setVariableName(std::string _name){std::cout<<"wrong\n";}
+    virtual std::string getVariableName(){std::cout<<"wrong\n";}
+    virtual void setPosition(int l,int c){std::cout<<"wrong\n";}
+    virtual void setPosition(Node*){std::cout<<"wrong\n";}
     virtual int getLineNumber(){std::cout<<"Wrong\n";}
-    virtual int getColumnNumber(){}
+    virtual int getColumnNumber(){std::cout<<"wrong\n";}
     virtual void setAttribute(void *p);
     virtual void copyFromChild(){
         //std::cout<<"Wrong copy\n";
@@ -152,11 +202,12 @@ public:
         this->setPosition(c->getLineNumber(), c->getColumnNumber());
     }
     virtual void copyFrom(Attribute *c);
+    virtual void fullCopyFrom(Node *c);
 };
-extern Node *cout;
+
 
 class AttributivedNode : public Node{
-private:
+protected:
     AttributivedNode::Type mTokenType;
     AttributivedNode::Kind mTokenKind;
     std::vector<AttributivedNode::Type> mTokenArgList;
@@ -167,6 +218,16 @@ private:
     int mLineNumber;
     int mColumnNumber;
 public:
+    virtual std::string codeGen(){
+        for(auto i : mChildren){
+            std::cout<<i->getName()<<" codeGen begin\n";
+            i->codeGen();
+            std::cout<<i->getName()<<" codeGen finished\n";
+        }
+        return "`";
+    }
+    virtual int getSize(){return -1;}
+    AttributivedNode(){};
     AttributivedNode(std::string _symbolName, int childrenNumber, ...):Node(_symbolName,0){
         va_list vl;
         va_start(vl, childrenNumber);
@@ -277,6 +338,159 @@ public:
     }
 };
 
+class StructDeclarationNode : public AttributivedNode{
+public:
+    StructDeclarationNode(Node *a){
+        this->fullCopyFrom(a);
+    }
+    Node::Type getType(){
+        return Node::TYPE_STRUCT;
+    }
+    int getSize();
+    virtual std::string codeGen();
+    int mSizeSum = -1;
+};
+
+class StructMemberNode : public AttributivedNode{
+public:
+    StructMemberNode(Node *a){
+        this->fullCopyFrom(a);
+    }
+    int getSize(){
+        int arraySize = 1;
+        if(isArray()){
+            for(int i : this->getArraySizes()){
+                arraySize *= i;
+            }
+        }
+        int singleSize = 1;
+        /*if(getType()==Node::TYPE_STRUCT){
+            singleSize = symbolTableStack->lookUp(this->getStructTypeName())->size;
+        }*/
+        return arraySize * singleSize;
+    }
+    virtual std::string codeGen(){
+        std::cout<<"skipped\n";
+        return "`";
+    }
+};
+
+class VariableDeclarationStatementNode : public AttributivedNode{
+public:
+    VariableDeclarationStatementNode(Node *a){
+        this->fullCopyFrom(a);
+    }
+
+    Node::Type getType(){
+        return mChildren[0]->getType();
+    }
+    std::string getTypeString(){
+        return mChildren[0]->getTypeString();
+    }
+    virtual std::string codeGen();
+};
+
+class VariableDeclarationNode : public AttributivedNode{
+public:
+    VariableDeclarationNode(Node *a){
+        this->fullCopyFrom(a);
+    }
+    Node::Type getType(){
+        return AttributivedNode::getType();
+    }
+    std::string getTypeString(){
+        return AttributivedNode::getTypeString();
+    }
+    int getSize();
+    virtual std::string codeGen();
+};
+
+class FunctionDeclarationNode : public AttributivedNode{
+public:
+    FunctionDeclarationNode(Node *c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+    int getSize();
+};
+
+class ExpressionNode : public AttributivedNode{
+public:
+    ExpressionNode(std::string _symbolName, int childrenNumber, ...):AttributivedNode(_symbolName,0){
+        va_list vl;
+        va_start(vl, childrenNumber);
+        for(int i=0;i<childrenNumber;i++){
+            mChildren.push_back(va_arg(vl,Node*));
+        }
+        mIsNegligible=(false),mSymbolName=(_symbolName),mIsTerminal=(false),mTokenValue=("I am not a terminal.");
+    }
+    ExpressionNode(Node *c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+
+
+public:
+    int intValue;
+    double doubleValue;
+};
+
+class StringNode : public ExpressionNode{
+public:
+    StringNode(Node *c):ExpressionNode(c){}
+    virtual std::string codeGen();
+};
+
+class IfNode : public AttributivedNode{
+public:
+    IfNode(Node *c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+};
+
+class ForNode : public AttributivedNode{
+public:
+    ForNode(Node *c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+};
+
+class RetNode : public AttributivedNode{
+public:
+    RetNode(Node* c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+};
+
+class ReadNode : public ExpressionNode{
+public:
+    ReadNode(std::string _symbolName, int childrenNumber, ...):ExpressionNode(_symbolName,0){
+        va_list vl;
+        va_start(vl, childrenNumber);
+        for(int i=0;i<childrenNumber;i++){
+            mChildren.push_back(va_arg(vl,Node*));
+        }
+        mIsNegligible=(false),mSymbolName=(_symbolName),mIsTerminal=(false),mTokenValue=("I am not a terminal.");
+    }
+    virtual std::string codeGen();
+};
+
+class WriteNode : public ExpressionNode{
+public:
+    WriteNode(std::string _symbolName, int childrenNumber, ...):ExpressionNode(_symbolName,0){
+        va_list vl;
+        va_start(vl, childrenNumber);
+        for(int i=0;i<childrenNumber;i++){
+            mChildren.push_back(va_arg(vl,Node*));
+        }
+        mIsNegligible=(false),mSymbolName=(_symbolName),mIsTerminal=(false),mTokenValue=("I am not a terminal.");
+    }
+    virtual std::string codeGen();
+};
+
 struct Attribute{
     std::string name;
     Node::Type type;
@@ -285,6 +499,9 @@ struct Attribute{
     std::vector<std::string> argListStructName;
     std::vector<int> arraySizes;
     std::string structTypeName;
+    int addr;
+    int size;
+    int offset;
     int lineNumber;
     int columnNumber;
     Attribute(std::string _name, Node::Type _type, Node::Kind _kind, std::vector<Node::Type> _argList, std::vector<std::string> _argListStructName, std::vector<int> _arraySizes, std::string _structTypeName, int l, int c)
@@ -292,7 +509,7 @@ struct Attribute{
     Attribute(){}
     Attribute(Node *p)
         : name(p->getVariableName()),type(p->getType()),kind(p->getKind()),argList(p->getArgList()),arraySizes(p->getArraySizes()),
-          structTypeName(p->getStructTypeName()),lineNumber(p->getLineNumber()),columnNumber(p->getColumnNumber()),argListStructName(p->getArgListStructName()){};
+          structTypeName(p->getStructTypeName()),lineNumber(p->getLineNumber()),columnNumber(p->getColumnNumber()),argListStructName(p->getArgListStructName()){std::cout<<"new attr\n";};
     void print(){
         std::cout<<name<<' ';
         switch(type){
@@ -354,6 +571,7 @@ struct Attribute{
             }
             std::cout<<' ';
         }
+        printf("addr:%d size:%d offset:%d ",addr,size,offset);
         printf(" --pos:l%dc%d\n", lineNumber, columnNumber);
     }
 };
@@ -369,6 +587,9 @@ public:
     }
     SymbolTable(std::string name):mSymbolTableName(name){
         set.insert({mSymbolTableName, this});
+    }
+    std::map<std::string, Attribute*> getTable(){
+        return map;
     }
     std::string getName(){
         return mSymbolTableName;
@@ -439,14 +660,12 @@ public:
         return NULL;
     }
     bool insert(Attribute* t){
+        std::cout<<"insert\n";
         return stack[stack.size()-1]->insert(t);
     }
 };
 
 //extern std::map<std::string, SymbolTable*> SymbolTable::set;
-extern int csLineCnt;
-extern int csColumnCnt;
-extern SymbolTableStack *symbolTableStack;
 
 bool checkType(Node *p, Node::Type type);
 bool checkKind(Node *p, Node::Kind kind);

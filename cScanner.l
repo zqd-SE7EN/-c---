@@ -24,6 +24,7 @@ string \"[^\"]*\"
 commitLine (\/\/.*\n)|(\/\*(.|\n)*\*\/)
 
 %%
+
 {emptyChar} {
     if(yytext[0]=='\n'){
         csColumnCnt=0;
@@ -36,6 +37,17 @@ commitLine (\/\/.*\n)|(\/\*(.|\n)*\*\/)
     csColumnCnt=0;
     for(int i=0;yytext[i];i++)
         csLineCnt+=(yytext[i]=='\n');
+}
+
+read {
+    echo();
+    csColumnCnt+=strlen(yytext);
+    return READ;
+}
+write {
+    echo();
+    csColumnCnt+=strlen(yytext);
+    return WRITE;
 }
 
 int {
@@ -268,8 +280,9 @@ goto {
 %%
 
 void echo(bool negligible){
+    //std::cout<<csLineCnt<<std::endl;
     mkNode(negligible);
-    //printf("get: %s\n",yytext);
+    printf("get: %s\n",yytext);
 }
 void echoint(){
     yylval.nodePtr = new AttributivedNode(std::string(yytext));
