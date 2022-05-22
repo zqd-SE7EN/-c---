@@ -20,24 +20,24 @@ int y;
 
 int main(){
     //cin>>an;cin>>am;
-    read(an);
-    read(am);
+    read(an,int);
+    read(am,int);
     i=0;
     j=0;
     for(i=0;i<an;i=i+1){
         for(j=0;j<am;j=j+1){
             //cin>>b[i][j];
-            read(m[i][j].a);
+            read(m[i][j].a,int);
         }
     }
 
     //cin>>bn;cin>>bm;
-    read(bn);
-    read(bm);
+    read(bn,int);
+    read(bm,int);
     for(i=0;i<bn;i=i+1){
         for(j=0;j<bm;j=j+1){
             //cin>>b[i][j];
-            read(m[i][j].b);
+            read(m[i][j].b,int);
         }
     }
 
@@ -57,11 +57,11 @@ int main(){
     for(i=0;i<cn;i=i+1){
         for(j=0;j<cm;j=j+1){
             //cout<<c[i][j]<<' ';
-            write(m[i][j].c);
-            write(" ");
+            write(m[i][j].c,int);
+            write(" ",int);
         }
         //cout<<'\n';
-        write("\n");
+        write("\n",int);
     }
     return 0;
 }
