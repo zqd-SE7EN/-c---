@@ -218,6 +218,9 @@ protected:
     int mLineNumber;
     int mColumnNumber;
 public:
+    virtual std::string getArgumentVariableName(){
+        throw("FOOL.");
+    }
     virtual std::string codeGen(){
         for(auto i : mChildren){
             std::cout<<i->getName()<<" codeGen begin\n";
@@ -320,6 +323,7 @@ public:
         this->mVariableName = _name;
     }
     std::string getVariableName(){
+
         return mVariableName;
     }
     void setPosition(int l,int c){
@@ -426,6 +430,13 @@ public:
     }
     ExpressionNode(Node *c):AttributivedNode(){
         this->fullCopyFrom(c);
+    }
+    std::string getArgumentVariableName(){
+        if(this->getVariableName().compare(".")==0) {
+            //symbolTableStack->push(SymbolTable::getSymbolTableByName(this->mChildren[0]->getStructTypeName()));
+            return this->mChildren[1]->getVariableName();
+        }
+        else return this->getVariableName();
     }
     virtual std::string codeGen();
 
@@ -658,6 +669,15 @@ public:
             }
         }
         return NULL;
+    }
+    Attribute *lookUp(std::string name, std::string tName){
+        if(tName.length()==0)return this->lookUp(name);
+        else {
+            this->push(SymbolTable::getSymbolTableByName(tName));
+            auto ret = this->lookUp(name);
+            this->pop();
+            return ret;
+        }
     }
     bool insert(Attribute* t){
         std::cout<<"insert\n";
