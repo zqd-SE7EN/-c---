@@ -33,17 +33,17 @@ int qsort(int st, int arrN, int i, int j){
 }
 
 int main(){
-    read(n);
+    read(n,int);
     I=0;
     for(I=0;I<n;I=I+1){
-        read(a[I]);
+        read(a[I],int);
     }
     qsort(0,n,0,n-1);
     I = 0;
     for(I=0;I<n;I=I+1){
-        write(a[I]);
-        write(" ");
+        write(a[I],int);
+        write(" ",int);
     }
-    write("\n");
+    write("\n",int);
     return 0;
 }
