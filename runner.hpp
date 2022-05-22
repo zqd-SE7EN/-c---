@@ -96,13 +96,30 @@ public:
                     fin>>s1>>s2>>d;
                 }else if(op.compare("RET")==0||op.compare("NULL")==0){
                     
-                }else if(op.compare("READ")==0||op.compare("WRITE")==0||op.compare("PUSH")==0||op.compare("POP")==0){
+                }else if(op.compare("PUSH")==0||op.compare("POP")==0){
                     
                     getline(fin,s1);
                     int lb=0, rb=s1.length()-1;
                     while(lb<rb && s1[lb]==' ')lb++;
                     while(rb>lb && s1[rb]==' ')rb--;
                     s1=s1.substr(lb,rb-lb+1);
+                }else if(op.compare("READ")==0||op.compare("WRITE")==0){
+                    std::string t;
+                    getline(fin,t);
+                    int lb=0, rb=t.length()-1;
+                    while(lb<rb && t[lb]==' ')lb++;
+                    while(rb>lb && t[rb]==' ')rb--;
+                    t=t.substr(lb,rb-lb+1);
+                    int mid = 0;
+                    if(t[mid]=='\"'){
+                        mid++;
+                        while(t[mid]!='\"')mid++;
+                        mid++;
+                    }else{
+                        while(t[mid]!=' ')mid++;
+                    }
+                    s1=t.substr(0,mid);
+                    s2=t.substr(mid+1, t.length()-mid-1);
                 }
                 this->ram.push_back({op,s1,s2,d});
             }else break;
