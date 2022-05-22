@@ -275,11 +275,12 @@ std::string getOffsetAddr(std::string symbolTableName, Node *c){
 
 std::string computeArrayOffset(ExpressionNode *c){
     ExpressionNode *p = c;
-    while(p->getChildrenNumber()!=0){
+    while(/*p->getChildrenNumber()!=0 && */p->getVariableName().compare("[]")==0){
         p = dynamic_cast<ExpressionNode*>(p->getChildrenById(0));
         assert(p!=NULL);
     }
-    auto attribute = symbolTableStack->lookUp(p->getVariableName());
+    std::cout<<p->getArgumentVariableName()<<std::endl;
+    auto attribute = symbolTableStack->lookUp(p->getArgumentVariableName(), p->getStructTypeName());
     assert(attribute!=NULL);
     auto &arraySizes = attribute->arraySizes;
 
@@ -300,6 +301,7 @@ std::string computeArrayOffset(ExpressionNode *c){
     std::stringstream ss;
     ss<<(attribute->size/sizeMul);
     program.push({"MUL", ss.str(), res, t=programNameCounter.getNumberedName("`t")}); /* for struct. */
+    
     return t;
 }
 
@@ -307,14 +309,17 @@ std::string ExpressionNode::codeGen(){
     std::string res;
     std::cout<<"ExpressionNode::codeGen: "<<this->getName()<<"\n";
     if(mChildren.size()==0){ // is terminal
+        std::cout<<this->getTokenValue()<<" : ";
         if(this->getKind()==Node::KIND_VARIABLE){
             auto attribute = symbolTableStack->lookUp(this->getVariableName());
             assert(attribute!=NULL);
             std::stringstream ss;
             ss<<"["<<attribute->addr<<"]";
+            std::cout<<ss.str()<<"\n";
             return ss.str();
         }else if(this->getType()==Node::TYPE_INT){
             sscanf(mTokenValue.c_str(),"%d",&this->intValue);
+            std::cout<<mTokenValue<<"\n";
             return {mTokenValue};
         }else if(this->getType()==Node::TYPE_DOUBLE){
             sscanf(mTokenValue.c_str(),"%lf",&this->doubleValue);
@@ -326,6 +331,7 @@ std::string ExpressionNode::codeGen(){
             }
             std::stringstream ss;
             ss<<this->intValue;
+            std::cout<<ss.str()<<"\n";
             return ss.str();
         }
     }else if(this->getName().length()==1){ /*            + - * / % = > < .         */
@@ -563,7 +569,12 @@ std::string RetNode::codeGen(){
 std::string ReadNode::codeGen(){
     std::string dst;
     dst = this->mChildren[0]->codeGen();
-    program.push({"READ", dst, "", ""});
+    std::string type = this->mChildren[1]->getChildrenById(0)->getTokenValue();
+    if(type.compare("int")==0){
+        program.push({"READ", dst, "INT", ""});
+    }else if(type.compare("char")==0){
+        program.push({"READ", dst, "CHAR", ""});
+    }
     return "`";
 
 }
@@ -571,7 +582,12 @@ std::string ReadNode::codeGen(){
 std::string WriteNode::codeGen(){
     std::string dst;
     dst = this->mChildren[0]->codeGen();
-    program.push({"WRITE", dst, "", ""});
+    std::string type = this->mChildren[1]->getChildrenById(0)->getTokenValue();
+    if(type.compare("int")==0){
+        program.push({"WRITE", dst, "INT", ""});
+    }else if(type.compare("char")==0){
+        program.push({"WRITE", dst, "CHAR", ""});
+    }
     return "`";
 }
 
