@@ -59,18 +59,28 @@ int Runner::run(){
             continue;
         }else if(inst.op.compare("RET")==0){
             pop(pc);
-
             continue;
         }else if(inst.op.compare("READ")==0){
             inst.d = inst.s1;
             //cout<<"input: ";
-            cin>>result;
+            if(inst.s2.compare("INT")==0){
+                scanf("%d",&result);
+            }else if(inst.s2.compare("CHAR")==0){
+                //scanf("%c",&result);
+                result=getchar();
+            }else{
+                std::cin>>result;
+            }
             //pc++;
             //continue;
         }else if(inst.op.compare("WRITE")==0){
             //cout<<"output: ";
             if(inst.s1[0]=='['||inst.s1[0]=='`'){
-                cout<<getValue(inst.s1);
+                if(inst.s2.compare("INT")==0){
+                    cout<<getValue(inst.s1);
+                }else if(inst.s2.compare("CHAR")==0){
+                    printf("%c",(char)getValue(inst.s1));
+                }
             }else{
                 for(int i=1;i<inst.s1.length()-1;i++){
                     if(inst.s1[i]=='\\'){
