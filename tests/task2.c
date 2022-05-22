@@ -1,7 +1,7 @@
 struct test{
-    int a;
-    int b;
-    int c;
+    int AA;
+    int A;
+    int a[3];
 };
 
 
@@ -17,6 +17,25 @@ int i;
 int j; 
 int x;
 int y;
+int kgCnt;
+int kgnm;
+int trash;
+
+int getKgCnt(int n){
+    kgnm=0;
+    if(n<0){
+        kgnm=kgnm+1;
+        n=0-n;
+    }
+    if(n==0){
+        kgnm=1;
+    }
+    for(trash=0;n>0;trash=0){
+        kgnm=kgnm+1;
+        n=n/10;
+    }
+    return 10-kgnm;
+}
 
 int main(){
     //cin>>an;cin>>am;
@@ -27,7 +46,7 @@ int main(){
     for(i=0;i<an;i=i+1){
         for(j=0;j<am;j=j+1){
             //cin>>b[i][j];
-            read(m[i][j].a,int);
+            read(m[i][j].a[0],int);
         }
     }
 
@@ -37,9 +56,14 @@ int main(){
     for(i=0;i<bn;i=i+1){
         for(j=0;j<bm;j=j+1){
             //cin>>b[i][j];
-            read(m[i][j].b,int);
+            read(m[i][j].a[1],int);
         }
     }
+
+    if(am!=bn){
+        write("Incompatible Dimensions\n",char);
+
+    }else{
 
     cn = an;
     cm = bm;
@@ -47,9 +71,9 @@ int main(){
         for(j=0;j<cm;j=j+1){
             t=0;
             for(x=0;x<am;x=x+1){
-                t = t + m[i][x].a*m[x][j].b;
+                t = t + m[i][x].a[0]*m[x][j].a[1];
             }
-            m[i][j].c=t;
+            m[i][j].a[2]=t;
         }
     }
 
@@ -57,11 +81,14 @@ int main(){
     for(i=0;i<cn;i=i+1){
         for(j=0;j<cm;j=j+1){
             //cout<<c[i][j]<<' ';
-            write(m[i][j].c,int);
-            write(" ",int);
+            kgCnt = getKgCnt(m[i][j].a[2]);
+            for(t=0;t<kgCnt;t=t+1){
+                write(" ",char);
+            }
+            write(m[i][j].a[2],int);
         }
         //cout<<'\n';
         write("\n",int);
-    }
+    }}
     return 0;
 }
