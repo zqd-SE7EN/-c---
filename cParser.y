@@ -577,11 +577,11 @@ statement :     /* a single statement, ended with (or block without) a ';'*/
     |   jumpStatement {
             $$ = new Node(nameCounter.getNumberedName("statement"), 1, $1);
         }
-    |   READ '(' expression ')' {
-            $$ = new ReadNode(nameCounter.getNumberedName("read"), 1, $3);
+    |   READ '(' assignmentExpression ',' typeName ')' {
+            $$ = new ReadNode(nameCounter.getNumberedName("read"), 2, $3, $5);
         }
-    |   WRITE '(' expression ')' {
-            $$ = new WriteNode(nameCounter.getNumberedName("write"), 1, $3);
+    |   WRITE '(' assignmentExpression ',' typeName ')' {
+            $$ = new WriteNode(nameCounter.getNumberedName("write"), 2, $3, $5);
         }
     |   error ';' {
         error_wrongStatement();
@@ -1182,6 +1182,7 @@ postfixUnaryExpression :
                 }*/
             }
             $$ = new ExpressionNode($$);
+            $$->setStructTypeName($1->getStructTypeName());
         }
     |   postfixUnaryExpression '(' paramList ')' {/* function, f()[i], f[i](), f[i]()[j] are all allowed */
             $$ = new AttributivedNode({"()"}, 2, $1, $3);
@@ -1240,6 +1241,7 @@ postfixUnaryExpression :
                 $$->copyFrom(symbolTable->lookUp($3->getTokenValue()));
             }
             $$ = new ExpressionNode($$);
+            $$->setStructTypeName($1->getStructTypeName());
         }
     |   postfixUnaryExpression PTR IDENTIFIER    {/* struct's member, pointer (a->val) */
             $2 = new AttributivedNode($2->getName(), 1, $1);
