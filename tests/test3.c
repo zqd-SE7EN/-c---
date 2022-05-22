@@ -1,7 +1,7 @@
-int courses[100][400];
-int map[100];
-int is_passed[100];
-int course_name[5];
+int courses[1000][4000];
+int map[1000];
+int is_passed[1000];
+int course_name[50];
 
 int GPA;
 int GPAInt;
@@ -73,7 +73,7 @@ int main() {
             num=num+1;
         }
     }
-    printCources(0,0);
+    //printCources(0,0);
     for(i = 0; i < num; i=i+1) {
         index = 0;
         field = 0;
@@ -138,6 +138,11 @@ int main() {
 
         if(((GPADot/10000)%10) >= 5)GPADot = GPADot/100000 + 1;
         else GPADot = GPADot/100000;
+
+        if(GPADot==10){
+            GPADot=0;
+            GPAInt=GPAInt+1;
+        }
     }
     remained_credits = total_credits - passed_credits;
     write("GPA: ",char);write(GPAInt,int);write(".",char);write(GPADot,int);write("\n",char);
@@ -170,7 +175,7 @@ int main() {
                 for(trash=0;courses[i][index] != 124;trash=0)index=index+1; // '|'
                 index=index+1;
                 if(courses[i][index] == 124) { // '|'
-                    putCourseName(0);write("\n",char);
+                    write("  ",char);putCourseName(0);write("\n",char);
                 }else {
                     flag = 1;
                     key = 0;
@@ -208,7 +213,7 @@ int main() {
                         }
                     }
                     if(flag) {
-                        putCourseName(0);write("\n",char);
+                        write("  ",char);putCourseName(0);write("\n",char);
                     }
                 }
             }
