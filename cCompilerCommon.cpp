@@ -284,7 +284,7 @@ std::string computeArrayOffset(ExpressionNode *c){
     assert(attribute!=NULL);
     auto &arraySizes = attribute->arraySizes;
 
-    std::string res, t;
+    std::string res, t, tober;
     res = c->getChildrenById(1)->codeGen();
     c=dynamic_cast<ExpressionNode*>(c->getChildrenById(0));
     int sizeMul = arraySizes[arraySizes.size()-1];
@@ -292,8 +292,11 @@ std::string computeArrayOffset(ExpressionNode *c){
         std::string midRes;
         std::stringstream ss;
         ss<<sizeMul;
-        program.push({"MUL", ss.str(), c->getChildrenById(1)->codeGen(), midRes=programNameCounter.getNumberedName("`t")});
+        program.push({"MUL", ss.str(), tober=c->getChildrenById(1)->codeGen(), midRes=programNameCounter.getNumberedName("`t")});
+        programNameCounter.releaseName(tober);
         program.push({"ADD", midRes, res, t=programNameCounter.getNumberedName("`t")});
+        programNameCounter.releaseName(midRes);
+        programNameCounter.releaseName(res);
         res = t;
         sizeMul *= arraySizes[i];
         c=dynamic_cast<ExpressionNode*>(c->getChildrenById(0));
@@ -301,12 +304,13 @@ std::string computeArrayOffset(ExpressionNode *c){
     std::stringstream ss;
     ss<<(attribute->size/sizeMul);
     program.push({"MUL", ss.str(), res, t=programNameCounter.getNumberedName("`t")}); /* for struct. */
-    
+    programNameCounter.releaseName(ss.str());
+    programNameCounter.releaseName(res);
     return t;
 }
 
 std::string ExpressionNode::codeGen(){
-    std::string res;
+    std::string res, t1, t2;
     std::cout<<"ExpressionNode::codeGen: "<<this->getName()<<"\n";
     if(mChildren.size()==0){ // is terminal
         std::cout<<this->getTokenValue()<<" : ";
@@ -337,28 +341,44 @@ std::string ExpressionNode::codeGen(){
     }else if(this->getName().length()==1){ /*            + - * / % = > < .         */
         switch(this->getName()[0]){
             case '+':
-                program.push({"ADD", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"ADD", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '-':
-                program.push({"SUB", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"SUB", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '*':
-                program.push({"MUL", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"MUL", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '/':
-                program.push({"DIV", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"DIV", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '%':
-                program.push({"REM", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"REM", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '>':
-                program.push({"SLT", this->mChildren[1]->codeGen(), this->mChildren[0]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"SLT", t1=this->mChildren[1]->codeGen(), t2=this->mChildren[0]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '<':
-                program.push({"SLT", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                program.push({"SLT", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), res=programNameCounter.getNumberedName("`t")});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return res;
             case '=':
-                program.push({"ADD", "0", this->mChildren[1]->codeGen(), this->mChildren[0]->codeGen()});
+                program.push({"ADD", "0", t1=this->mChildren[1]->codeGen(), t2=this->mChildren[0]->codeGen()});
+                programNameCounter.releaseName(t1);
+                programNameCounter.releaseName(t2);
                 return "`";
                 //return programNameCounter.getNumberedName("`t");
             case '.':
@@ -380,53 +400,73 @@ std::string ExpressionNode::codeGen(){
         if(this->getName().compare({"=="}) == 0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"SUB", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"SUB", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"ADD", "0", "0", res});
             program.push({"BNE", subRes, "0", "1"});
+            programNameCounter.releaseName(subRes);
             program.push({"ADD", "1", "0", res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
             return res;
         }else if(this->getName().compare({">="})==0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"SUB", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"SUB", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"SLT", "-1", subRes, res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
+            programNameCounter.releaseName(subRes);
             return res;
         }else if(this->getName().compare({"<="})==0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"SUB", this->mChildren[1]->codeGen(), this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"SUB", t1=this->mChildren[1]->codeGen(), t2=this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"SLT", "-1", subRes, res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
+            programNameCounter.releaseName(subRes);
             return res;
         }else if(this->getName().compare({"||"})==0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"ADD", this->mChildren[1]->codeGen(), this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"ADD", t1=this->mChildren[1]->codeGen(), t2=this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"ADD", "0", "0", res});
             program.push({"BEQ", subRes, "0", "1"});
+            programNameCounter.releaseName(subRes);
             program.push({"ADD", "1", "0", res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
             return res;
         }else if(this->getName().compare({"&&"})==0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"ADD", this->mChildren[1]->codeGen(), this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"ADD", t1=this->mChildren[1]->codeGen(), t2=this->mChildren[0]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"ADD", "0", "0", res});
             program.push({"BNE", subRes, "2", "1"});
+            programNameCounter.releaseName(subRes);
             program.push({"ADD", "1", "0", res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
             return res;
         }else if(this->getName().compare({"!="})==0){
             std::string subRes;
             res=programNameCounter.getNumberedName("`t");
-            program.push({"SUB", this->mChildren[0]->codeGen(), this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
+            program.push({"SUB", t1=this->mChildren[0]->codeGen(), t2=this->mChildren[1]->codeGen(), subRes=programNameCounter.getNumberedName("`t")});
             program.push({"ADD", "0", "0", res});
             program.push({"BEQ", subRes, "0", "1"});
+            programNameCounter.releaseName(subRes);
             program.push({"ADD", "1", "0", res});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
             return res;
         }else if(this->getName().compare({"[]"})==0){
             std::string subRes;
             std::string baseAddr = getAddr(mChildren[0]);
             //std::stringstream ss;
             //ss<<baseAddr;
-            program.push({"ADD", baseAddr, computeArrayOffset(this)/*this->mChildren[1]->codeGen()*/, res=programNameCounter.getNumberedName("`t")});
+            program.push({"ADD", t1=baseAddr, t2=computeArrayOffset(this)/*this->mChildren[1]->codeGen()*/, res=programNameCounter.getNumberedName("`t")});
+            programNameCounter.releaseName(t1);
+            programNameCounter.releaseName(t2);
             return std::string("[") + res + std::string("]");
         }else if(this->getName().compare({"()"})==0){
             auto table = SymbolTable::getSymbolTableByName(this->mChildren[0]->getVariableName())->getTable();
@@ -467,6 +507,7 @@ std::string ExpressionNode::codeGen(){
                             ss<<"["<<i.second->addr<<"]";
                             // program.push({"PUSH", ss.str(), "", ""});
                             program.push({"ADD", "0", argValue, ss.str()});
+                            programNameCounter.releaseName(argValue);
                             argCnt++;
                             break;
                         }
@@ -482,6 +523,22 @@ std::string ExpressionNode::codeGen(){
                 return ss.str();
             }
         }
+    }else {
+        if(this->getName().compare("pre++")==0){ // ++a
+            program.push({"ADD", this->mChildren[0]->codeGen(), "1", this->mChildren[0]->codeGen()});
+            return this->mChildren[0]->codeGen();
+        }else if(this->getName().compare("pre--")==0){ // --a
+            program.push({"SUB", this->mChildren[0]->codeGen(), "1", this->mChildren[0]->codeGen()});
+            return this->mChildren[0]->codeGen();
+        }else if(this->getName().compare("post++")==0){ // a++
+            program.push({"ADD", this->mChildren[0]->codeGen(), "0", res=programNameCounter.getNumberedName("`t")});
+            program.push({"ADD", this->mChildren[0]->codeGen(), "1", this->mChildren[0]->codeGen()});
+            return res;
+        }else if(this->getName().compare("post--")==0){ // a--
+            program.push({"ADD", this->mChildren[0]->codeGen(), "0", res=programNameCounter.getNumberedName("`t")});
+            program.push({"SUB", this->mChildren[0]->codeGen(), "1", this->mChildren[0]->codeGen()});
+            return res;
+        }
     }
 }
 
@@ -496,6 +553,7 @@ std::string IfNode::codeGen(){
     /*condition*/
     conditionResult=this->mChildren[1]->codeGen();
     program.push({"BEQ", "0", conditionResult, elseBlockLabel});
+    programNameCounter.releaseName(conditionResult);
     /*then*/
     thenBlock->codeGen();
     program.push({"BEQ", "0", "0", arterBlockLabel});
@@ -517,49 +575,55 @@ std::string ForNode::codeGen(){
     std::string conditionResult;
     std::string loopStartLabel = programNameCounter.getNumberedName("LoopStart");
     std::string afterLoopLabel = programNameCounter.getNumberedName("LoopEnd");
+    std::string tober;
 
-    initialExpressions->codeGen();
+    tober=initialExpressions->codeGen();
+    programNameCounter.releaseName(tober);
 
     program.labelNextLine(loopStartLabel);
     conditionResult = conditionExpresstion->codeGen();
     program.push({"BEQ", "0", conditionResult, afterLoopLabel});
+    programNameCounter.releaseName(conditionResult);
 
     loopBody->codeGen();
-    tailExpression->codeGen();
+    tober=tailExpression->codeGen();
+    programNameCounter.releaseName(tober);
     program.push({"BEQ", "0", "0", loopStartLabel});
     program.labelNextLine(afterLoopLabel);
+    return "`";
+}
+
+std::string WhileNode::codeGen(){
+    ExpressionNode *conditionExpression = dynamic_cast<ExpressionNode*>(this->mChildren[1]);
+    Node *whileBody = this->mChildren[2];
+
+    std::string loopStartLabel = programNameCounter.getNumberedName("LoopStart");
+    std::string afterLoopLabel = programNameCounter.getNumberedName("LoopEnd");
+    std::string tober;
+
+    program.labelNextLine(loopStartLabel);
+    program.push({"BEQ", "0", tober=conditionExpression->codeGen(), afterLoopLabel});
+    programNameCounter.releaseName(tober);
+
+    whileBody->codeGen();
+    program.push({"BEQ","0","0",loopStartLabel});
+    program.labelNextLine(afterLoopLabel);
+
     return "`";
 }
 
 std::string RetNode::codeGen(){
     std::cout<<"RerNode::codeGen(): "<<this->mChildren.size()<<"\n";
     auto table = SymbolTable::getSymbolTableByName(symbolTableStack->top()->getName())->getTable();
-    /*int cnt = 0;
-    std::stack<std::string> s;
-    while(true){
-        bool f=true;
-        for(auto a : table){
-            if(a.second->offset==cnt){
-                f = false;
-                cnt++;
-                std::stringstream ss;
-                ss<<"["<<a.second->addr<<"]";
-                s.push(ss.str());
-            }
-        }
-        if(f)break;
-    }
-    while(!s.empty()){
-        program.push({"POP",s.top(),"",""});
-        s.pop();
-    }*/
+    std::string tober;
     if(this->mChildren.size()==1){
         program.push({"RET","","",""});
     }else{
         std::stringstream ss;
         std::cout<<"using symbol table: "<<symbolTableStack->top()->getName()<<"\n";
         ss<<"["<<symbolTableStack->lookUp(symbolTableStack->top()->getName())->addr<<"]";
-        program.push({"ADD", "0", mChildren[1]->codeGen(), ss.str()});
+        program.push({"ADD", "0", tober=mChildren[1]->codeGen(), ss.str()});
+        programNameCounter.releaseName(tober);
         program.push({"RET","","",""});
     }
     symbolTableStack->pop();
@@ -575,6 +639,7 @@ std::string ReadNode::codeGen(){
     }else if(type.compare("char")==0){
         program.push({"READ", dst, "CHAR", ""});
     }
+    programNameCounter.releaseName(dst.substr(1,dst.length()-2));
     return "`";
 
 }
@@ -588,6 +653,7 @@ std::string WriteNode::codeGen(){
     }else if(type.compare("char")==0){
         program.push({"WRITE", dst, "CHAR", ""});
     }
+    programNameCounter.releaseName(dst.substr(1,dst.length()-2));
     return "`";
 }
 
@@ -595,3 +661,4 @@ std::string WriteNode::codeGen(){
 std::string StringNode::codeGen(){
     return this->mTokenValue;
 }
+
