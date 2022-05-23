@@ -21,18 +21,50 @@ extern int csLineCnt;
 extern int csColumnCnt;
 extern SymbolTableStack *symbolTableStack;
 
+
 class NameCounter{
 private:
     std::map<std::string, int> map;
+    std::map<std::pair<std::string, int>, bool> mark;
 public:
     NameCounter(){}
     std::string getNumberedName(std::string name){
         if(map.find(name)==map.end()){
             map.insert({name,0});
         }
-        return name+"["+std::to_string(map[name]++)+"]";
+        int i;
+        for(i=0;i<map[name];i++){
+            if(mark.find({name,i})!=mark.end()){
+                if(mark[{name,i}]==false)break;
+            }
+        }
+        if(i<map[name]){
+            mark[{name,i}] = true;
+            return name+"["+std::to_string(i)+"]";
+        }else{
+            std::string ret = name+"["+std::to_string(map[name]++)+"]";
+            mark.insert({{name,map[name]-1}, true});
+            return ret;
+        }
+    }
+    std::string releaseName(std::string name){
+        std::cout<<"releasing "<<name<<std::endl;
+        if(name[0]=='[')name=name.substr(1,name.length()-2);
+        if(name[0]!='`'||name.length()<3)return name;
+        
+        int id;
+        int i=name.length()-1;
+        while(name[i]!='[')i--;
+        std::string ids = name.substr(i+1, name.length()-i-2);
+        std::string nameo = name.substr(0, i);
+        sscanf(ids.c_str(),"%d",&id);
+        if(mark.find({nameo,id})==mark.end())return name;
+        else mark[std::pair<std::string, int>(nameo,id)]=false;
+        std::cout<<"release OK "<<name<<std::endl;
+        return name;
     }
 };
+extern NameCounter programNameCounter;
 
 class AddressCounter{
 private:
@@ -224,7 +256,7 @@ public:
     virtual std::string codeGen(){
         for(auto i : mChildren){
             std::cout<<i->getName()<<" codeGen begin\n";
-            i->codeGen();
+            programNameCounter.releaseName(i->codeGen());
             std::cout<<i->getName()<<" codeGen finished\n";
         }
         return "`";
@@ -468,6 +500,13 @@ public:
     virtual std::string codeGen();
 };
 
+class WhileNode : public AttributivedNode{
+public:
+    WhileNode(Node *c):AttributivedNode(){
+        this->fullCopyFrom(c);
+    }
+    virtual std::string codeGen();
+};
 class RetNode : public AttributivedNode{
 public:
     RetNode(Node* c):AttributivedNode(){
