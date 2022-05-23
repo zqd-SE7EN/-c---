@@ -1,8 +1,13 @@
 # -c---
 浙江大学《编译原理》课程实验：c--编译器
+
 生成三地址码，实现三地址码解释器，使用三地址码解释器运行三地址码。
+
 已实现结构体。
+
 已通过所有测试。
+
+新加了对while和前后加加减减的支持。
 ```
 yacc -d cParser.y -o cParser.cpp
 flex -o cScanner.cpp cScanner.l
