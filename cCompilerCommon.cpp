@@ -3,6 +3,7 @@
 int csLineCnt = 0;
 //Node *cout=0;
 int csColumnCnt = 0;
+int forexpandexp=1;
 AddressCounter* addressCounter = new AddressCounter();
 
 std::map<std::string, SymbolTable*> SymbolTable::set;
@@ -140,7 +141,7 @@ int StructDeclarationNode::getSize(){
     for(auto record : (SymbolTable::getSymbolTableByName(mChildren[1]->getStructTypeName()))->getTable()){
         /**/
         auto attribute = record.second;
-        std::cout<<"building struct member: "<<attribute->name<<std::endl;
+        //std::cout<<"building struct member: "<<attribute->name<<std::endl;
         attribute->offset = sizeSum;
         if(attribute->type == Node::TYPE_STRUCT){
             attribute->size = symbolTableStack->lookUp(attribute->structTypeName)->size;
@@ -158,21 +159,21 @@ int StructDeclarationNode::getSize(){
 }
 
 std::string StructDeclarationNode::codeGen(){
-std::cout<<"StructDeclarationNode::codeGen\n";
+//std::cout<<"StructDeclarationNode::codeGen\n";
     //symbolTableStack->push(SymbolTable::getSymbolTableByName(getStructTypeName()));
     auto attribute = symbolTableStack->lookUp(mChildren[1]->getStructTypeName());
 
     if(attribute==NULL){
-        std::cout<<mChildren[1]->getStructTypeName()<<" not found.";
+        //std::cout<<mChildren[1]->getStructTypeName()<<" not found.";
         exit(1);
     }
     attribute->size = getSize();
-    std::cout<<"StructDeclarationNode::codeGen finished\n";
+    //std::cout<<"StructDeclarationNode::codeGen finished\n";
     //symbolTableStack->pop();
 }
 
 std::string VariableDeclarationStatementNode::codeGen(){
-    std::cout<<"VariableDeclarationStatementNode::codeGen\n";
+    //std::cout<<"VariableDeclarationStatementNode::codeGen\n";
     auto variables = mChildren[1]->getChildren();
     std::stringstream ss;
     for(auto variable : variables){
@@ -182,7 +183,7 @@ std::string VariableDeclarationStatementNode::codeGen(){
 }
 
 std::string VariableDeclarationNode::codeGen(){
-    std::cout<<"VariableDeclarationNode::codeGen\n";
+    //std::cout<<"VariableDeclarationNode::codeGen\n";
     auto attribute = symbolTableStack->lookUp(this->getVariableName());
     assert(attribute!=NULL);
     attribute->size = getSize();
@@ -196,7 +197,7 @@ int FunctionDeclarationNode::getSize(){
 }
 
 std::string FunctionDeclarationNode::codeGen(){
-    std::cout<<"FunctionDeclarationNode::codeGen\n";
+    //std::cout<<"FunctionDeclarationNode::codeGen\n";
     auto attribute = symbolTableStack->lookUp(this->getVariableName());
     assert(attribute!=NULL);
     attribute->size = getSize();
@@ -279,7 +280,7 @@ std::string computeArrayOffset(ExpressionNode *c){
         p = dynamic_cast<ExpressionNode*>(p->getChildrenById(0));
         assert(p!=NULL);
     }
-    std::cout<<p->getArgumentVariableName()<<std::endl;
+    //std::cout<<p->getArgumentVariableName()<<std::endl;
     auto attribute = symbolTableStack->lookUp(p->getArgumentVariableName(), p->getStructTypeName());
     assert(attribute!=NULL);
     auto &arraySizes = attribute->arraySizes;
@@ -311,19 +312,19 @@ std::string computeArrayOffset(ExpressionNode *c){
 
 std::string ExpressionNode::codeGen(){
     std::string res, t1, t2;
-    std::cout<<"ExpressionNode::codeGen: "<<this->getName()<<"\n";
+    //std::cout<<"ExpressionNode::codeGen: "<<this->getName()<<"\n";
     if(mChildren.size()==0){ // is terminal
-        std::cout<<this->getTokenValue()<<" : ";
+        //std::cout<<this->getTokenValue()<<" : ";
         if(this->getKind()==Node::KIND_VARIABLE){
             auto attribute = symbolTableStack->lookUp(this->getVariableName());
             assert(attribute!=NULL);
             std::stringstream ss;
             ss<<"["<<attribute->addr<<"]";
-            std::cout<<ss.str()<<"\n";
+            //std::cout<<ss.str()<<"\n";
             return ss.str();
         }else if(this->getType()==Node::TYPE_INT){
             sscanf(mTokenValue.c_str(),"%d",&this->intValue);
-            std::cout<<mTokenValue<<"\n";
+            //std::cout<<mTokenValue<<"\n";
             return {mTokenValue};
         }else if(this->getType()==Node::TYPE_DOUBLE){
             sscanf(mTokenValue.c_str(),"%lf",&this->doubleValue);
@@ -335,7 +336,7 @@ std::string ExpressionNode::codeGen(){
             }
             std::stringstream ss;
             ss<<this->intValue;
-            std::cout<<ss.str()<<"\n";
+            //std::cout<<ss.str()<<"\n";
             return ss.str();
         }
     }else if(this->getName().length()==1){ /*            + - * / % = > < .         */
@@ -496,6 +497,14 @@ std::string ExpressionNode::codeGen(){
                     }
                     if(f)break;
                 }
+                for(auto i : table){
+                    if(i.second->offset == -1){
+                        std::stringstream ss;
+                        ss<<"["<<i.second->addr<<"]";
+                        program.push({"PUSH", ss.str(), "", ""});
+                        s.push(ss.str());
+                    }
+                }
                 argCnt=0;
                 /* chuan can shu */
                 for(auto expression : argValueExpressions){
@@ -567,30 +576,72 @@ std::string IfNode::codeGen(){
 }
 
 std::string ForNode::codeGen(){
+    int K=4;
+    Node *kNode = new ExpressionNode(new AttributivedNode("4"));
+    kNode->setVariableName("4");
+    kNode->setType(Node::TYPE_INT);
+    kNode->setKind(Node::KIND_CONSTANT);
     Node *initialExpressions = this->mChildren[1];
     Node *conditionExpresstion = this->mChildren[2]->getChildrenById(0);
     Node *tailExpression = this->mChildren[3];
     Node *loopBody = this->mChildren[4];
-
-    std::string conditionResult;
-    std::string loopStartLabel = programNameCounter.getNumberedName("LoopStart");
-    std::string afterLoopLabel = programNameCounter.getNumberedName("LoopEnd");
     std::string tober;
+    std::string conditionResult;
+    if(!this->boostable()){
+        std::string loopStartLabel = programNameCounter.getNumberedName("LoopStart");
+        std::string afterLoopLabel = programNameCounter.getNumberedName("LoopEnd");
+        tober=initialExpressions->codeGen();
+        programNameCounter.releaseName(tober);
 
-    tober=initialExpressions->codeGen();
-    programNameCounter.releaseName(tober);
+        program.labelNextLine(loopStartLabel);
+        if(dynamic_cast<EmptyNode*>(conditionExpresstion)==NULL){
+            conditionResult = conditionExpresstion->codeGen();
+            program.push({"BEQ", "0", conditionResult, afterLoopLabel});
+            programNameCounter.releaseName(conditionResult);
+        }
 
-    program.labelNextLine(loopStartLabel);
-    conditionResult = conditionExpresstion->codeGen();
-    program.push({"BEQ", "0", conditionResult, afterLoopLabel});
-    programNameCounter.releaseName(conditionResult);
+        loopBody->codeGen();
+        tober=tailExpression->codeGen();
+        programNameCounter.releaseName(tober);
+        program.push({"BEQ", "0", "0", loopStartLabel});
+        program.labelNextLine(afterLoopLabel);
+        return "`";
+    }else{
+        forexpandexp*=K;
+        std::string loopStartLabelK = programNameCounter.getNumberedName("LoopStartK");
+        std::string loopStartLabel1 = programNameCounter.getNumberedName("LoopStart1");
+        std::string afterLoopLabel = programNameCounter.getNumberedName("LoopEnd");
+        tober=initialExpressions->codeGen();
+        programNameCounter.releaseName(tober);
 
-    loopBody->codeGen();
-    tober=tailExpression->codeGen();
-    programNameCounter.releaseName(tober);
-    program.push({"BEQ", "0", "0", loopStartLabel});
-    program.labelNextLine(afterLoopLabel);
-    return "`";
+        program.labelNextLine(loopStartLabelK);
+        Node *leftHand = conditionExpresstion->getChildrenById(0);
+        Node *rightHand = conditionExpresstion->getChildrenById(1);
+        
+        Node *addNode = new ExpressionNode(new Node("+",2,leftHand,kNode));
+        Node *BENode = new ExpressionNode (new Node("<",2,addNode,rightHand));
+        conditionResult = BENode->codeGen();
+        program.push({"BEQ", "0", conditionResult, loopStartLabel1});
+        programNameCounter.releaseName(conditionResult);
+
+        for(int i=0;i<K;i++){
+            loopBody->codeGen();
+            tober=tailExpression->codeGen();
+            programNameCounter.releaseName(tober);
+        }
+        program.push({"BEQ", "0", "0", loopStartLabelK});
+        program.labelNextLine(loopStartLabel1);
+
+        conditionResult = conditionExpresstion->codeGen();
+        program.push({"BEQ", "0", conditionResult, afterLoopLabel});
+        programNameCounter.releaseName(conditionResult);
+        loopBody->codeGen();
+        tober=tailExpression->codeGen();
+        programNameCounter.releaseName(tober);
+        program.push({"BEQ", "0", "0", loopStartLabel1});
+        program.labelNextLine(afterLoopLabel);
+        forexpandexp/=K;
+    }
 }
 
 std::string WhileNode::codeGen(){
@@ -613,14 +664,14 @@ std::string WhileNode::codeGen(){
 }
 
 std::string RetNode::codeGen(){
-    std::cout<<"RerNode::codeGen(): "<<this->mChildren.size()<<"\n";
+    //std::cout<<"RerNode::codeGen(): "<<this->mChildren.size()<<"\n";
     auto table = SymbolTable::getSymbolTableByName(symbolTableStack->top()->getName())->getTable();
     std::string tober;
     if(this->mChildren.size()==1){
         program.push({"RET","","",""});
     }else{
         std::stringstream ss;
-        std::cout<<"using symbol table: "<<symbolTableStack->top()->getName()<<"\n";
+        //std::cout<<"using symbol table: "<<symbolTableStack->top()->getName()<<"\n";
         ss<<"["<<symbolTableStack->lookUp(symbolTableStack->top()->getName())->addr<<"]";
         program.push({"ADD", "0", tober=mChildren[1]->codeGen(), ss.str()});
         programNameCounter.releaseName(tober);
@@ -662,3 +713,30 @@ std::string StringNode::codeGen(){
     return this->mTokenValue;
 }
 
+bool ForNode::boostable(){
+    if(forexpandexp>256)return false;
+    Node *initialExpressions = this->mChildren[1];
+    Node *conditionExpresstion = this->mChildren[2]->getChildrenById(0);
+    Node *tailExpression = this->mChildren[3];
+    Node *loopBody = this->mChildren[4];
+    if(tailExpression->getName().compare("post++")!=0)return false;
+    if(conditionExpresstion->getName().compare("<")!=0)return false;
+    if(tailExpression->getChildrenById(0)->getName().compare(
+            conditionExpresstion->getChildrenById(0)->getName()
+            )!=0)return false;
+    if(loopBody->checkIfModified(conditionExpresstion->getChildrenById(0)->getName()) || 
+        loopBody->checkIfModified(conditionExpresstion->getChildrenById(1)->getName()))return false;
+    return true;
+}
+
+bool Node::checkIfModified(std::string name){
+    char *u=new char;// allign address.
+    if(this->mChildren.size()==0)return false;
+    if(this->getName().compare("=")==0 || this->getName().compare("post++")==0 || this->getName().compare("post--")==0){
+        if(this->mChildren[0]->getName().compare(name)==0)return true;;
+    }
+    for(auto child : mChildren){
+        if(child->checkIfModified(name))return true;
+    }
+    return false;
+}
