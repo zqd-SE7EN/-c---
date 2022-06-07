@@ -15,7 +15,7 @@
 ```
 yacc -d cParser.y -o cParser.cpp
 flex -o cScanner.cpp cScanner.l
-cc cScanner.cpp cParser.cpp cCompilerCommon.cpp main.cpp runner.cpp -o compiler -lm -lstdc++
+cc cScanner.cpp cParser.cpp cCompilerCommon.cpp main.cpp runner.cpp NameCounter.cpp SymbolTable.cpp codeGen.cpp -o compiler -lm -lstdc++
 cc runner.cpp runnerMain.cpp -o runner -lm -lstdc++
 
 ```

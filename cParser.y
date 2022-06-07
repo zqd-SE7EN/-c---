@@ -41,8 +41,8 @@ void error_functionReturnsArray();
 }
 %type<nodePtr> GOTO ADD_ASSIGN SUB_ASSIGN MUL_ASSIGN DIV_ASSIGN LOGICAL_OR LOGICAL_AND EQ NE GE LE SL SR INC DEC IDENTIFIER NUMBER STRING FOR DO WHILE CONTINUE BREAK IF ELSE SWITCH CASE RETURN STRUCT INT DOUBLE CHAR PTR CONST DEFAULT FLOAT STATIC UNSIGNED VOID 
 %type<nodePtr> cCode0 cCode globalDeclaration declaration type READ WRITE
-%type<nodePtr> typeName structTypeName structMemberDeclarations structMemberDeclaration structMembers initializations initialization variable pointerSpecifier variableName
-%type<nodePtr> paramTypes paramTypeName variableWithNoName variableWithNoNameCore initialValue initialValues functionDeclaration statementBlock localDeclarations statements
+%type<nodePtr> typeName structTypeName structMemberDeclarations structMemberDeclaration structMembers initializations initialization variable /* pointerSpecifier */ variableName
+%type<nodePtr> paramTypes paramTypeName /* variableWithNoName variableWithNoNameCore initialValue initialValues */ functionDeclaration statementBlock localDeclarations statements
 %type<nodePtr> statement expressionStatement loopStatement branchStatement caseBlock caseStatements jumpStatement expression assignmentExpression tenaryConditionExpression
 %type<nodePtr> logicalOrExpression logicalAndExpression bitwiseOrExpression bitwiseExclusiveOrExpression bitwiseAndExpression equalityComparisonExpression 
 %type<nodePtr> shiftExpression arithmeticAddExpression arithmeticMulExpression castedExpression unaryExpression prefixUnaryExpression postfixUnaryExpression 
@@ -80,10 +80,6 @@ globalDeclaration :
     |   functionDeclaration { /* In C, all functions must be declared global (grammatically). */ 
             $$ = new Node(nameCounter.getNumberedName("globalDeclaration"), 1, $1);
         }
-    /*|   statement {
-            yyerror("syntax error");
-            std::cout<<"C only supports statements within a function.\n";
-        }*/
     |   '}' {
             yyerror("syntax error");
             std::cout<<"a '}' without its '{'.\n";
@@ -92,12 +88,7 @@ globalDeclaration :
 
 /* In C, a declaration is part from statement, treated specially */
 /* ...because a declaration can be outside any function, but statement must be in a function */
-/*
-declarations :  
-        declaration
-    |   declarations declaration
-    ;
-*/
+
 declaration :
         type initializations ';' {
             $$ = new Node(nameCounter.getNumberedName("declaration"), 3, $1, $2, $3);
@@ -126,30 +117,24 @@ declaration :
             symbolTableStack->push(new SymbolTable($2->getStructTypeName()));
         } '{' structMemberDeclarations '}' ';' {
             $$ = new Node(nameCounter.getNumberedName("declaration"), 6, $1, $2, $4, $5, $6, $7);
-            $$ = new StructDeclarationNode($$); // TODO
+            $$ = new StructDeclarationNode($$); 
             symbolTableStack->pop();
         }
     |   type initializations error  {
         error_missingSemicolon();
     } 
-    /*
-    |   STRUCT IDENTIFIER '{' structMemberDeclarations '}' error ';' {
-        error_missingSemicolon();
-    }*/
     ;
 
 type :
         typeName {           /* int */
-            // $$ = new AttributivedNode(nameCounter.getNumberedName("type"), 1, $1);
-            // $$->copyFromChild();
             $$ = $1;
         } 
-    |   CONST typeName {     /* const int */
+    /*|   CONST typeName {     // const int Not supported
             $$ = new Node(nameCounter.getNumberedName("type"), 2, $1, $2);
         }
-    |   STATIC typeName {    /* static int */
+    |   STATIC typeName {    // static int 
             $$ = new Node(nameCounter.getNumberedName("type"), 2, $1, $2);
-        }
+        }*/
     ;
 
 typeName :
@@ -159,19 +144,19 @@ typeName :
             $$->setKind(Node::KIND_ATTRIBUTE);
             $$->setPosition(csLineCnt, csColumnCnt);
         }               
-    |   UNSIGNED INT { 
+    /*|   UNSIGNED INT { not supported
             $$ = new AttributivedNode(nameCounter.getNumberedName("typeName"), 2, $1, $2);
             $$->setType(Node::TYPE_INT);
             $$->setKind(Node::KIND_ATTRIBUTE);
             $$->setPosition(csLineCnt, csColumnCnt);
-        }  
+        }  */
     |   CHAR { 
             $$ = new AttributivedNode(nameCounter.getNumberedName("typeName"), 1, $1);
             $$->setType(Node::TYPE_CHAR);
             $$->setKind(Node::KIND_ATTRIBUTE);
             $$->setPosition(csLineCnt, csColumnCnt);
         }  
-    |   FLOAT { 
+    /*|   FLOAT { // not supported
             $$ = new AttributivedNode(nameCounter.getNumberedName("typeName"), 1, $1);
             $$->setType(Node::TYPE_FLOAT);
             $$->setKind(Node::KIND_ATTRIBUTE);
@@ -182,7 +167,7 @@ typeName :
             $$->setType(Node::TYPE_DOUBLE);
             $$->setKind(Node::KIND_ATTRIBUTE);
             $$->setPosition(csLineCnt, csColumnCnt);
-        }  
+        }  */
     |   VOID { 
             $$ = new AttributivedNode(nameCounter.getNumberedName("typeName"), 1, $1);
             $$->setType(Node::TYPE_VOID);
@@ -255,9 +240,6 @@ structMemberDeclaration :
                 }
             }
         }
-    /*|   type structMembers error {
-        error_missingSemicolon();
-    }*/
     ;
 
 structMembers : /* notice: initialization is not allowed within a struct */
@@ -286,45 +268,40 @@ initializations :
 
 initialization :
         variable {                       /* int a; */
-            // $$ = new AttributivedNode(nameCounter.getNumberedName("initialization"), 1, $1);
-            // $$->copyFromChild();
             std::cout<<csLineCnt<<std::endl;
             $$ = new VariableDeclarationNode($1);
-            //std::cout<<"name: "<<$$->getVariableName()<<std::endl;
         }
-    |   variable '=' initialValue {   /* int a=10; */
+    /*|   variable '=' initialValue {   // int a=10;  Not supported
             $$ = new AttributivedNode(nameCounter.getNumberedName("initialization"), 3, $1, $2, $3);
             $$->copyFromChild();
-            //std::cout<<"name: "<<$$->getVariableName()<<std::endl;
-        }
+        }*/
     ;
 
 variable :
-        pointerSpecifier variableName {  /* int *a; */
+    /*    pointerSpecifier variableName {  // int *a;  pointer is not supported
             $$ = new Node(nameCounter.getNumberedName("variable"), 2, $1, $2);
         }
-    |   variableName {
-            // $$ = new AttributivedNode(nameCounter.getNumberedName("variable"), 1, $1);
-            // $$->copyFromChild();
+    |*/   variableName {
             $$ = $1;
-            //std::cout<<"name: "<<$$->getVariableName()<<std::endl;
         }
     ;
 
+/* // pointer is not supported
 pointerSpecifier :
-        '*' { /* a simple pointer */
+        '*' { // a simple pointer 
             $$ = new Node(nameCounter.getNumberedName("pointerSpecifier"), 1, $1);
         }
-    |   pointerSpecifier '*' { /* a pointer to another pointer variable */
+    |   pointerSpecifier '*' { // a pointer to another pointer variable 
             $$ = new Node(nameCounter.getNumberedName("pointerSpecifier"), 2, $1, $2);
         }
-    |   '*' CONST { /* a pointer to a const variable */
+    |   '*' CONST { // a pointer to a const variable 
             $$ = new Node(nameCounter.getNumberedName("pointerSpecifier"), 2, $1, $2);
         }
-    |   pointerSpecifier '*' CONST { /* a pointer to another pointer which is a pointer to a const value */
+    |   pointerSpecifier '*' CONST { // a pointer to another pointer which is a pointer to a const value 
             $$ = new Node(nameCounter.getNumberedName("pointerSpecifier"), 3, $1, $2, $3);
         }
     ;
+*/
 
 variableName :
         IDENTIFIER {
@@ -349,9 +326,9 @@ variableName :
             }
             
         }
-    |   '(' variable ')' {              /* used for pointer to an multi-div array, a function, etc. */
+    /*|   '(' variable ')' {              // used for pointer to an multi-div array, a function, etc. Not supported
             $$ = new Node(nameCounter.getNumberedName("variableName"), 3, $1, $2, $3);
-        }
+        }*/
     |   variableName '(' ')' {           /* declaration of a function, but no implementation yet. */
             $$ = new AttributivedNode(nameCounter.getNumberedName("variableName"), 3, $1, $2, $3);
             $$->setKind(Node::KIND_FUNCTION);
@@ -376,7 +353,6 @@ variableName :
             }
             $$->setArgList(argList);
             $$->setArgListStructName(argListStructName);
-            /* TODO: Think about the argument list */
         }
     ;
 
@@ -392,22 +368,23 @@ paramTypes :    /* param can have no name, so I have to rewrite it to distinguis
     ;
 
 paramTypeName :
-        type {   /* int (*f)(double,char); */
+    // function pointer is not supported.
+    /*    type {   // int (*f)(double,char); 
             $$ = new Node(nameCounter.getNumberedName("paramTypeName"), 1, $1);
         }
-    |   type variableWithNoName { /* if the param is a pointer or something else */
+    |   type variableWithNoName { // if the param is a pointer or something else 
             $$ = new Node(nameCounter.getNumberedName("paramTypeName"), 2, $1, $2);
         }
-    |   type variable {      /* int (*f)(double a,char *b); */
+    |*/ type variable {      // int (*f)(double a,char *b); 
             $$ = new AttributivedNode(nameCounter.getNumberedName("paramTypeName"), 2, $1, $2);
-            // $2->setVariableName($2->getVariableName())
             $$->copyFrom($2);
             $$->setType($1);
         }
     ;
 
-variableWithNoName :        /* !! read this along with 'variable' !!*/
-        pointerSpecifier {       /* int (*f)(double *,char **); */
+/*
+variableWithNoName :        // !! read this along with 'variable' !!
+        pointerSpecifier {       // int (*f)(double *,char **); 
             $$ = new Node(nameCounter.getNumberedName("variableWithNoName"), 1, $1);
         }
     |   variableWithNoNameCore {
@@ -415,35 +392,37 @@ variableWithNoName :        /* !! read this along with 'variable' !!*/
         }
     ;
 
-variableWithNoNameCore :    /* !! read this along with 'variableName' !!*/
+variableWithNoNameCore :    // !! read this along with 'variableName' !!
         variableWithNoNameCore '[' NUMBER ']' {
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 4, $1, $2, $3, $4);
         }
     |   '(' variableWithNoName ')' {
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 3, $1, $2, $3);
         }
-    |   variableWithNoNameCore '(' ')' {  /* a function taking another function as param... */
+    |   variableWithNoNameCore '(' ')' {  // a function taking another function as param... 
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 3, $1, $2, $3);
         }
-    |   variableWithNoNameCore '(' paramTypes ')' { /* a function taking another function as param... */
+    |   variableWithNoNameCore '(' paramTypes ')' { // a function taking another function as param... 
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 4, $1, $2, $3, $4);
         }
-    |   '[' ']' {            /* because it has no name, it must stop some way. Below is some terminators */
+    |   '[' ']' {            // because it has no name, it must stop some way. Below is some terminators 
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 2, $1, $2);
         }
     |   '(' ')' {
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 2, $1, $2);
         }
-    |   '(' paramTypes ')' { /* a function taking another function as param... */
+    |   '(' paramTypes ')' { // a function taking another function as param... 
             $$ = new Node(nameCounter.getNumberedName("variableWithNoNameCore"), 3, $1, $2, $3);
         }
     ;
+*/
 
+/* // Initialization is not supported
 initialValue :
-        '{' initialValues '}' {          /* int a[10]={1}; */
+        '{' initialValues '}' {          // int a[10]={1}; 
             $$ = new Node(nameCounter.getNumberedName("initialValue"), 3, $1, $2, $3);
         }
-    |   assignmentExpression {          /* int a=5+6; int b=a=3; */
+    |   assignmentExpression {          // int a=5+6; int b=a=3; 
             $$ = new Node(nameCounter.getNumberedName("initialValue"), 1, $1);
     }
     ;
@@ -452,54 +431,33 @@ initialValues :
         initialValue {
             $$ = new Node(nameCounter.getNumberedName("initialValues"), 1, $1);
         }
-    |   initialValues ',' initialValue { /* int a[10]={1,2,3} */
+    |   initialValues ',' initialValue { // int a[10]={1,2,3} 
             $$ = $1;
             $$->addChild($2);
             $$->addChild($3);
         }
     ;
-
-/*
-functionDeclaration :
-        type variable '(' ')' statementBlock
-    |   type variable '(' params ')' statementBlock
-    ;
-
-params : 
-        paramDeclaration
-    |   params ',' paramDeclaration
-    ;
-
-paramDeclaration :
-        type '*' IDENTIFIER
-    |   type IDENTIFIER
-    |   type IDENTIFIER '[' ']'
-    ;
 */
 
-functionDeclaration :   /* rule above has something wrong, we can not recognize if a identifier is a function or a regular variable. Besides, it brings more conflicts */
+
+functionDeclaration :   
         type variable { 
             $2->setType($1->getType());
             if($2->isArray()){
                 error_functionReturnsArray();
             }
-            //$2->setKind(Node::KIND_FUNCTION);
             if(symbolTableStack->insert(new Attribute($2))==false){
                 error_duplicatedVariable($2);
                 $2->setVariableName(nameCounter.getNumberedName($2->getVariableName()));
                 while(symbolTableStack->insert(new Attribute($2))==false){
                     $2->setVariableName(nameCounter.getNumberedName($2->getVariableName()));
                 }
-                //std::cout<<" Your code is not going to be compiled due to this error.\n";
             }
-            std::cout<<"function Inserted."<<'\n';
             symbolTableStack->push(new SymbolTable($2->getVariableName()));
-            std::cout<<"table pushed."<<'\n';
             if($2->getArgList().size()>0){
                 int ii=0;
-                for(int i=0;i<$2/*->getChildrenById($2->getChildrenNumber()-1)*/->getChildrenById(2)->getChildrenNumber();i++){
-                    std::cout<<"~~"<<i<<'\n';
-                    auto argument = $2/*->getChildrenById($2->getChildrenNumber()-1)*/->getChildrenById(2)->getChildrenById(i);
+                for(int i=0;i<$2->getChildrenById(2)->getChildrenNumber();i++){
+                    auto argument = $2->getChildrenById(2)->getChildrenById(i);
                     if(argument->isTerminal())continue;
                     argument->setKind(Node::KIND_VARIABLE);
                     auto t = new Attribute(argument);
@@ -510,12 +468,9 @@ functionDeclaration :   /* rule above has something wrong, we can not recognize 
                 }
             }
             $2 = new FunctionDeclarationNode($2);
-            std::cout<<"function ready."<<'\n';
         } statementBlock {
-            //std::cout<<"a function found\n";
             $$ = new Node(nameCounter.getNumberedName("functionDeclaration"), 3, $1, $2, $4);
             symbolTableStack->pop();
-            // $$ = new 
         }
     ;
 
@@ -527,26 +482,6 @@ statementBlock :
         }
     |   '{' statements '}' {
             $$ = new Node(nameCounter.getNumberedName("statementBlock"), 3, $1, $2, $3);
-        }/*
-    |   '{' localDeclarations '}' {
-            $$ = new Node(nameCounter.getNumberedName("statementBlock"), 3, $1, $2, $3);
-        }
-    |   '{' localDeclarations statements '}' { /* our C only supports declarations before all statements *//*
-            $$ = new Node(nameCounter.getNumberedName("statementBlock"), 4, $1, $2, $3, $4);
-        }
-    |   '{' localDeclarations statements error '}' {
-            yyerror("Declaration after statements");
-            //printf("Our language doesn't support statements")
-        }*/
-    ;
-
-localDeclarations :
-        declaration {
-            $$ = new Node(nameCounter.getNumberedName("localDeclarations"), 1, $1);
-        }
-    |   localDeclarations declaration {
-            $$ = $1;
-            $$->addChild($2);
         }
     ;
 
@@ -588,7 +523,6 @@ statement :     /* a single statement, ended with (or block without) a ';'*/
             for(int i=0;i<$2->getChildrenNumber();i++){
                 std::cout<<"_"<<i<<std::endl;
                 Node *child = $2->getChildrenById(i);
-                //child->setType($1->getType());
                 child->setType($1);
             }
             for(int i=0;i<$2->getChildrenNumber();i++){
@@ -602,16 +536,12 @@ statement :     /* a single statement, ended with (or block without) a ';'*/
             $$ = new VariableDeclarationStatementNode($$);
         }
     |   error ';' {
-        error_wrongStatement();
-    }
-    /*|   error '}' {
-        error_wrongStatement();
-    }*/
+            error_wrongStatement();
+        }
     ;
 
 expressionStatement :
         ';' {
-            //std::cout<<"a empty expression statement found\n";
             $$ = new Node(nameCounter.getNumberedName("expressionStatement"), 1, $1);
             $$ = new EmptyNode($$);
         }
@@ -619,8 +549,8 @@ expressionStatement :
             $$ = new Node(nameCounter.getNumberedName("expressionStatement"), 2, $1, $2);
         }
     |   expression error {
-        error_missingSemicolon();
-    }
+            error_missingSemicolon();
+        }
     ;
 
 loopStatement : /* for, while, do-while*/
@@ -628,10 +558,11 @@ loopStatement : /* for, while, do-while*/
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, $3, $4, $5, $6, $7);
             $$ = new ForNode($$);
         }
-    |   FOR '(' ';' ';' ')' statement { /* dead loop */
+    /*|   FOR '(' ';' ';' ')' statement { // implicit dead loop is not supported 
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, new EmptyNode(new Node(0)), new EmptyNode(new Node(0)), new EmptyNode(new Node(0)), $5, $6);
             $$ = new ForNode($$);
         }
+    */
     |   WHILE '(' expression ')' statement {
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 5, $1, $2, $3, $4, $5);
             $$ = new WhileNode($$);
@@ -640,9 +571,6 @@ loopStatement : /* for, while, do-while*/
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, $3, $4, $5, $6, $7);
         }
     |   WHILE '(' expression error { error_missingRightBrancket(); } ')' statement /* error recovery */
-    |   WHILE '(' error { error_wrongExpression; } ')' statement { 
-
-    }
     ;
 
 branchStatement :
@@ -654,12 +582,13 @@ branchStatement :
             $$ = new Node(nameCounter.getNumberedName("branchStatement"), 7, $1, $2, $3, $4, $5, $6, $7);
             $$ = new IfNode($$);
         }
-    |   SWITCH '(' expression ')' caseBlock
+    /* |   SWITCH '(' expression ')' caseBlock */
     |   error  ELSE statement {
             { error_elseWithNoIf(); }
         }
     ;   /* too complex, SWITCH is not supported yet */
 
+/*
 caseBlock :
         '{' caseStatements '}'
     ;
@@ -668,11 +597,11 @@ caseStatements :
         CASE tenaryConditionExpression ':' statement
     |   DEFAULT ':' statement
     ;
+*/
 
 jumpStatement :
         RETURN ';' {
             $$ = new Node(nameCounter.getNumberedName("jumpStatement"), 2, $1, $2);
-            /* TODO: check if the type of return value matches the function */
             if(symbolTableStack->lookUp(symbolTableStack->top()->getName())->type != Node::TYPE_VOID){
                 error_returnValueTypeMismatch(symbolTableStack->lookUp(symbolTableStack->top()->getName()), symbolTableStack->lookUp(symbolTableStack->top()->getName())->type);
             }
@@ -703,8 +632,6 @@ jumpStatement :
 
 expression : 
         assignmentExpression {
-            //$$ = new AttributivedNode(nameCounter.getNumberedName("expression"), 1, $1);
-            //$$->copyFrom($1);
             if(dynamic_cast<StringNode*>($1)==NULL)
                 $$ = new ExpressionNode($1);
             else
@@ -716,9 +643,6 @@ expression :
             $$->addChild($3);
             $$->copyFrom($$->getChildrenById($$->getChildrenNumber()-1));
         }
-    /*|   error ',' {
-        error_wrongExpression();
-    }*/
     ;
 
 /* PRIORITY 14: "=, +=, -=, ..." assignment */
@@ -783,9 +707,6 @@ assignmentExpression :
                 error_typeMismatch($1);
             }
         }
-    /*|   error ')' {
-        error_wrongExpression();
-    }*/
     ;
 
 /* PRIORITY 13: "?:" tenary conditional operator */
@@ -913,9 +834,6 @@ equalityComparisonExpression :
             $$->copyFromChild();
             $$->setType(Node::TYPE_INT);
             $$->setKind(Node::KIND_CONSTANT);
-            /*if(checkType($1,Node::TYPE_STRUCT)||checkType($1,Node::TYPE_VOID)||checkType($1,Node::TYPE_STRING)||checkType($3,Node::TYPE_STRUCT)||checkType($3,Node::TYPE_VOID)||checkType($3,Node::TYPE_STRING)){
-                error_expressionTypeError($1,$2,$3);
-            }*/
             if(!typeMatch($1,$3) || $1->getType()==Node::TYPE_VOID || $1->isArray() || $3->isArray()){
                 error_expressionTypeError($1,$2,$3);
             }
@@ -927,9 +845,6 @@ equalityComparisonExpression :
             $$->copyFromChild();
             $$->setType(Node::TYPE_INT);
             $$->setKind(Node::KIND_CONSTANT);
-            /*if(checkType($1,Node::TYPE_STRUCT)||checkType($1,Node::TYPE_VOID)||checkType($1,Node::TYPE_STRING)||checkType($3,Node::TYPE_STRUCT)||checkType($3,Node::TYPE_VOID)||checkType($3,Node::TYPE_STRING)){
-                error_expressionTypeError($1,$2,$3);
-            }*/
             if(!typeMatch($1,$3) || $1->getType()==Node::TYPE_VOID || $1->isArray() || $3->isArray()){
                 error_expressionTypeError($1,$2,$3);
             }
@@ -1107,12 +1022,12 @@ castedExpression :
        unaryExpression {
             $$ = $1;
         }
-    |   '(' type ')' castedExpression {
+    /*|   '(' type ')' castedExpression { // not supported
             $$ = new AttributivedNode("castedExpression", 2, $2, $4);
         }
     |   '(' type variableWithNoName ')' castedExpression {
             $$ = new AttributivedNode("castedExpression", 3, $2, $3, $5);
-        }
+        }*/
     ;
 
 /* PRIORITY 1: "++, --, !, ~" unary operator, and ". ->" */
@@ -1201,9 +1116,6 @@ postfixUnaryExpression :
                 auto arraySizes = $$->getArraySizes();
                 arraySizes.erase(arraySizes.begin(),arraySizes.begin()+1);
                 $$->setArraySizes(arraySizes);
-                /*if(!((checkKind($3, Node::KIND_VARIABLE) || checkKind($3, Node::KIND_CONSTANT)) && checkType($3, Node::TYPE_INT) && $1->isArray() )){
-                    error_expressionTypeError($1,$$,$3);
-                }*/
             }
             $$ = new ExpressionNode($$);
             $$->setStructTypeName($1->getStructTypeName());
@@ -1227,7 +1139,6 @@ postfixUnaryExpression :
                     }
                 }
                 if(argList.size()!=$1->getArgList().size()){
-                    //std::cout<<"~";
                     error_argumentNumberNotMatch($1,argList.size());
                 }else{
                     if(!typeMatch(argList,$1,argListStructName)){
@@ -1314,9 +1225,6 @@ atomicExpression :
     |   '(' expression ')' {
             $$ = $2;
         }
-    /*|   '(' expression error {
-        error_missingRightBrancket();
-    }*/
     ;
 
 /* --------------The formula expressions---------------- */
@@ -1325,14 +1233,11 @@ atomicExpression :
 %%
 int yyerror(std::string s){
     noError = false;
-    //printf("%s\n",s.c_str());
     printf("syntax error at line %d, column %d.\n", csLineCnt, csColumnCnt);
-    //return 0;
 }
 void error_missingSemicolon(){
     std::cout<<"[ERROR] ";
     printf("Missing \';\' at line %d, after column %d\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
-    //eatToNewLine();
 }
 void error_wrongStatement(){
     std::cout<<"[ERROR] ";
@@ -1346,12 +1251,10 @@ void error_wrongExpression(){
 void error_missingRightBrancket(){
     std::cout<<"[ERROR] ";
     printf("expect \')\' at line %d, after column %d .\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
-    //eatToNewLine();
 }
 void error_missingRightBrancket2(){
     std::cout<<"[ERROR] ";
     printf("expect \']\' at line %d, after column %d .\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
-    //eatToNewLine();
 }
 void error_elseWithNoIf(){
     std::cout<<"[ERROR] ";

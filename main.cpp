@@ -8,10 +8,10 @@ int main(){
         Node *treeRoot = makeParseTree();
         std::cout<<"makeDone\n";
         if(treeRoot){
-            treeRoot->printTree();
+            treeRoot->printTree(0);
             treeRoot->simplify();
             std::cout<<"\n\nThe simplified tree is:\n\n";
-            treeRoot->printTree();
+            treeRoot->printTree(0);
         }
         std::cout<<"Original SymbolTable:\n\n";
         SymbolTable::viewAllSymbolTable();
