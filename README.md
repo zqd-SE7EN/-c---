@@ -9,6 +9,8 @@
 
 新加了对while和前后加加减减的支持。
 
+新加了对局部变量的支持。
+
 尝试了循环展开。
 ```
 yacc -d cParser.y -o cParser.cpp
