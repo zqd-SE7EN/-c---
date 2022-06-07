@@ -110,6 +110,7 @@ protected:
     bool mIsNegligible;
     std::vector<Node*> mChildren;
 public:
+    bool checkIfModified(std::string name);
     Node(){};
     Node(std::string _symbolName, int childrenNumber, ...):mIsNegligible(false),mSymbolName(_symbolName),mIsTerminal(false),mTokenValue("I am not a terminal."){
         va_list vl;
@@ -152,6 +153,7 @@ public:
         return this->mTokenValue;
     }
     std::string getName()const{
+        std::cout<<"getName: "<<(mIsTerminal?mTokenValue:mSymbolName)<<'\n';
         return mIsTerminal?mTokenValue:mSymbolName;
     }
     void printTree(int depth=0){
@@ -478,6 +480,14 @@ public:
     double doubleValue;
 };
 
+class EmptyNode : public AttributivedNode{
+public:
+    EmptyNode(Node *a){
+        this->fullCopyFrom(a);
+    }
+    virtual std::string codeGen(){return "`";}
+};
+
 class StringNode : public ExpressionNode{
 public:
     StringNode(Node *c):ExpressionNode(c){}
@@ -498,6 +508,7 @@ public:
         this->fullCopyFrom(c);
     }
     virtual std::string codeGen();
+    bool boostable();
 };
 
 class WhileNode : public AttributivedNode{
@@ -550,8 +561,8 @@ struct Attribute{
     std::vector<int> arraySizes;
     std::string structTypeName;
     int addr;
-    int size;
-    int offset;
+    int size=-1;
+    int offset=-1;
     int lineNumber;
     int columnNumber;
     Attribute(std::string _name, Node::Type _type, Node::Kind _kind, std::vector<Node::Type> _argList, std::vector<std::string> _argListStructName, std::vector<int> _arraySizes, std::string _structTypeName, int l, int c)
