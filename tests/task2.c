@@ -43,8 +43,8 @@ int main(){
     read(am,int);
     i=0;
     j=0;
-    for(i=0;i<an;i=i+1){
-        for(j=0;j<am;j=j+1){
+    for(i=0;i<an;i++){
+        for(j=0;j<am;j++){
             //cin>>b[i][j];
             read(m[i][j].a[0],int);
         }
@@ -53,8 +53,8 @@ int main(){
     //cin>>bn;cin>>bm;
     read(bn,int);
     read(bm,int);
-    for(i=0;i<bn;i=i+1){
-        for(j=0;j<bm;j=j+1){
+    for(i=0;i<bn;i++){
+        for(j=0;j<bm;j++){
             //cin>>b[i][j];
             read(m[i][j].a[1],int);
         }
@@ -67,10 +67,10 @@ int main(){
 
     cn = an;
     cm = bm;
-    for(i=0;i<cn;i=i+1){
-        for(j=0;j<cm;j=j+1){
+    for(i=0;i<cn;i++){
+        for(j=0;j<cm;j++){
             t=0;
-            for(x=0;x<am;x=x+1){
+            for(x=0;x<am;x++){
                 t = t + m[i][x].a[0]*m[x][j].a[1];
             }
             m[i][j].a[2]=t;
@@ -78,11 +78,11 @@ int main(){
     }
 
     i=0;
-    for(i=0;i<cn;i=i+1){
-        for(j=0;j<cm;j=j+1){
+    for(i=0;i<cn;i++){
+        for(j=0;j<cm;j++){
             //cout<<c[i][j]<<' ';
             kgCnt = getKgCnt(m[i][j].a[2]);
-            for(t=0;t<kgCnt;t=t+1){
+            for(t=0;t<kgCnt;t++){
                 write(" ",char);
             }
             write(m[i][j].a[2],int);
