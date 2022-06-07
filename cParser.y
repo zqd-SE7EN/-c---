@@ -93,9 +93,7 @@ declaration :
         type initializations ';' {
             $$ = new Node(nameCounter.getNumberedName("declaration"), 3, $1, $2, $3);
             for(int i=0;i<$2->getChildrenNumber();i++){
-                std::cout<<"_"<<i<<std::endl;
                 Node *child = $2->getChildrenById(i);
-                //child->setType($1->getType());
                 child->setType($1);
             }
             for(int i=0;i<$2->getChildrenNumber();i++){
@@ -268,7 +266,6 @@ initializations :
 
 initialization :
         variable {                       /* int a; */
-            std::cout<<csLineCnt<<std::endl;
             $$ = new VariableDeclarationNode($1);
         }
     /*|   variable '=' initialValue {   // int a=10;  Not supported
@@ -521,7 +518,6 @@ statement :     /* a single statement, ended with (or block without) a ';'*/
     |   type initializations ';' {
             $$ = new Node(nameCounter.getNumberedName("localDeclaration"), 3, $1, $2, $3);
             for(int i=0;i<$2->getChildrenNumber();i++){
-                std::cout<<"_"<<i<<std::endl;
                 Node *child = $2->getChildrenById(i);
                 child->setType($1);
             }
@@ -1236,65 +1232,79 @@ int yyerror(std::string s){
     printf("syntax error at line %d, column %d.\n", csLineCnt, csColumnCnt);
 }
 void error_missingSemicolon(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("Missing \';\' at line %d, after column %d\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
 }
 void error_wrongStatement(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("a statement near line %d is illeagal. ", csLineCnt);
     printf("maybe you\'re putting a declaration after a statement.\n");//'
 }
 void error_wrongExpression(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("an expression near line %d is illeagal.\n", csLineCnt);
 }
 void error_missingRightBrancket(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("expect \')\' at line %d, after column %d .\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
 }
 void error_missingRightBrancket2(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("expect \']\' at line %d, after column %d .\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
 }
 void error_elseWithNoIf(){
+    noError = false;
     std::cout<<"[ERROR] ";
     printf("expect \"if\" for the \"else\", at line %d, near column %d .\n", csLineCnt, csColumnCnt-(int)strlen(yytext));
 }
 void error_duplicatedVariable(Node *c){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"variable \""<<c->getVariableName()<<"\" at line "<<c->getLineNumber()<<" near column "<<c->getColumnNumber()<<""<<" has been declared before.\n";
     std::cout<<" Hint: first declaraed at line "<<symbolTableStack->lookUp(c->getVariableName())->lineNumber<<", near column "<<symbolTableStack->lookUp(c->getVariableName())->columnNumber<<std::endl;
 }
 void error_variableNotDeclared(std::string name){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"variable \""<<name<<"\" was not declared.\n";
     std::cout<<" Hint: first used at line "<<csLineCnt<<", near column "<<csColumnCnt<<std::endl;
 }
 void error_structNotDeclared(std::string name){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"struct type name \""<<name<<"\" was not declared.\n";
     std::cout<<" Hint: first used at line "<<csLineCnt<<", near column "<<csColumnCnt<<std::endl;
 }
 void error_illegalArraySize(Node* c){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"Size of array at line "<<c->getLineNumber()<<" near column "<<c->getColumnNumber()<<" must be a integer and must be a constant.\n";
 }
 void error_expressionTypeError(Node *exp1, Node *op, Node *exp2){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"Type error at line "<<op->getLineNumber()<<" near column "<<op->getColumnNumber()<<":\n";
     std::cout<<" Type "<<exp1->getTypeString()<<" and type "<<exp2->getTypeString()<<" are not match for the operator \""<<op->getTokenValue()<<"\"\n";
 }
 void error_expressionTypeError(Node *exp1, Node *op){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"Type error at line "<<op->getLineNumber()<<" near column "<<op->getColumnNumber()<<":\n";
     std::cout<<" Type "<<exp1->getTypeString()<<" is not supported for the operator \""<<op->getTokenValue()<<"\"\n";
 }
 void error_typeMismatch(Node *c){
+    noError = false;
     std::cout<<"[ERROR] ";
     std::cout<<"Type mismatch at line "<<c->getLineNumber()<<" near column "<<c->getColumnNumber()<<"\n";
     std::cout<<" Hint: are you putting an array at the left hand of \'=\', or using \'=\' to connect two mismatched type?\n";
 }
 void error_variableNotDeclaredInStruct(Node *v, Node *m){
+    noError = false;
     std::cout<<"[ERROR] variable \""<<v->getVariableName()<<"\" dose not has member \""<<m->getTokenValue()<<"\"\n";
     auto attribute = symbolTableStack->lookUp(v->getVariableName());
     if(attribute){
@@ -1302,25 +1312,31 @@ void error_variableNotDeclaredInStruct(Node *v, Node *m){
     }
 }
 void error_argumentNumberNotMatch(Node *f,int an){
+    noError = false;
     std::cout<<"[ERROR] function's argument number not match at line "<<f->getLineNumber()<<" near column "<<f->getColumnNumber()<<"\n";//'
     std::cout<<" Hint: function \""<<f->getVariableName()<<"\" needs "<<f->getArgList().size()<<" arguments but you gave "<<an<<".\n";
 }
 void error_notArray(Node *c){
+    noError = false;
     std::cout<<"[ERROR] \""<<c->getVariableName()<<"\" at line "<<c->getLineNumber()<<" near column "<<c->getColumnNumber()<<" is not an array.\n";
     std::cout<<" Hint: are you using too many \"[]\"\'s to access an array?\n";//'
 }
 void error_returnValueTypeMismatch(Attribute* need, Node::Type give){
+    noError = false;
     std::cout<<"[ERROR] return value type mismatch at line "<<csLineCnt<<std::endl;
     std::cout<<" Hint: the function returns "<<type_to_string(need)<<" but you gave nothing\n"; 
 }
 void error_returnValueTypeMismatch(Attribute* need, Node* give){
+    noError = false;
     std::cout<<"[ERROR] return value type mismatch at line "<<csLineCnt<<std::endl;
     std::cout<<" Hint: the function returns "<<type_to_string(need)<<" but you gave "<<give->getTypeString()<<std::endl;
 }
 void error_functionReturnsArray(){
+    noError = false;
     std::cout<<"[ERROR] at line "<<csLineCnt<<": function cannot return an array\n";
 }
 void error_argumentTypeNotMatch(std::vector<Node::Type>& userGave,Node *function,std::vector<std::string>& structTypeName){
+    noError = false;
     std::cout<<"[ERROR] function's argument type not match at line "<<function->getLineNumber()<<" near column "<<function->getColumnNumber()<<"\n";//'
     std::cout<<" Hint: function \""<<function->getVariableName()<<"\" needs parameters of (";
     auto fa = function->getArgList();
