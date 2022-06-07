@@ -282,7 +282,7 @@ goto {
 void echo(bool negligible){
     //std::cout<<csLineCnt<<std::endl;
     mkNode(negligible);
-    printf("get: %s\n",yytext);
+    //printf("get: %s\n",yytext);
 }
 void echoint(){
     yylval.nodePtr = new AttributivedNode(std::string(yytext));
