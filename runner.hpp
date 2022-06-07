@@ -73,15 +73,9 @@ public:
     }
 
     void readCode(std::string fileName="./midcode.m"){
-        //cout<<"reading\n";
         std::fstream fin(fileName);
-        //istream &fin=cin;
-        //cout<<"opend\n";
         std::string name;
-        //cout<<"nameready\n";
         fin>>name;
-        //cout<<"nameread\n";
-        //cout<<name;
         while(!fin.eof()){
             std::string op,s1,s2,d;
             fin>>op;
@@ -134,7 +128,6 @@ public:
             fin>>number;
             this->lineLable[label]=number;
         }
-        //cout<<"read finish.\n";
     }
     
 protected:
@@ -181,7 +174,6 @@ protected:
             }else{
                 int in;
                 sscanf(name.c_str(),"%d",&in);
-                //std::cout<<"immediate "<<in<<"\n";
                 return in;
             }
         }
