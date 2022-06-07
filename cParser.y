@@ -80,10 +80,10 @@ globalDeclaration :
     |   functionDeclaration { /* In C, all functions must be declared global (grammatically). */ 
             $$ = new Node(nameCounter.getNumberedName("globalDeclaration"), 1, $1);
         }
-    |   statement {
+    /*|   statement {
             yyerror("syntax error");
             std::cout<<"C only supports statements within a function.\n";
-        }
+        }*/
     |   '}' {
             yyerror("syntax error");
             std::cout<<"a '}' without its '{'.\n";
@@ -527,17 +527,17 @@ statementBlock :
         }
     |   '{' statements '}' {
             $$ = new Node(nameCounter.getNumberedName("statementBlock"), 3, $1, $2, $3);
-        }
+        }/*
     |   '{' localDeclarations '}' {
             $$ = new Node(nameCounter.getNumberedName("statementBlock"), 3, $1, $2, $3);
         }
-    |   '{' localDeclarations statements '}' { /* our C only supports declarations before all statements */
+    |   '{' localDeclarations statements '}' { /* our C only supports declarations before all statements *//*
             $$ = new Node(nameCounter.getNumberedName("statementBlock"), 4, $1, $2, $3, $4);
         }
     |   '{' localDeclarations statements error '}' {
             yyerror("Declaration after statements");
             //printf("Our language doesn't support statements")
-        }
+        }*/
     ;
 
 localDeclarations :
@@ -583,6 +583,24 @@ statement :     /* a single statement, ended with (or block without) a ';'*/
     |   WRITE '(' assignmentExpression ',' typeName ')' {
             $$ = new WriteNode(nameCounter.getNumberedName("write"), 2, $3, $5);
         }
+    |   type initializations ';' {
+            $$ = new Node(nameCounter.getNumberedName("localDeclaration"), 3, $1, $2, $3);
+            for(int i=0;i<$2->getChildrenNumber();i++){
+                std::cout<<"_"<<i<<std::endl;
+                Node *child = $2->getChildrenById(i);
+                //child->setType($1->getType());
+                child->setType($1);
+            }
+            for(int i=0;i<$2->getChildrenNumber();i++){
+                Node *child = $2->getChildrenById(i);
+                if(child->isTerminal() && child->getTokenValue().compare({","})==0)continue;
+                assert(child!=NULL);
+                if(symbolTableStack->insert(new Attribute(child)) == false){// insert fault.
+                    error_duplicatedVariable(child);
+                }
+            }
+            $$ = new VariableDeclarationStatementNode($$);
+        }
     |   error ';' {
         error_wrongStatement();
     }
@@ -595,6 +613,7 @@ expressionStatement :
         ';' {
             //std::cout<<"a empty expression statement found\n";
             $$ = new Node(nameCounter.getNumberedName("expressionStatement"), 1, $1);
+            $$ = new EmptyNode($$);
         }
     |   expression ';' {
             $$ = new Node(nameCounter.getNumberedName("expressionStatement"), 2, $1, $2);
@@ -609,8 +628,13 @@ loopStatement : /* for, while, do-while*/
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, $3, $4, $5, $6, $7);
             $$ = new ForNode($$);
         }
+    |   FOR '(' ';' ';' ')' statement { /* dead loop */
+            $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, new EmptyNode(new Node(0)), new EmptyNode(new Node(0)), new EmptyNode(new Node(0)), $5, $6);
+            $$ = new ForNode($$);
+        }
     |   WHILE '(' expression ')' statement {
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 5, $1, $2, $3, $4, $5);
+            $$ = new WhileNode($$);
         }
     |   DO statement WHILE '(' expression ')' ';' {
             $$ = new Node(nameCounter.getNumberedName("loopStatement"), 7, $1, $2, $3, $4, $5, $6, $7);
