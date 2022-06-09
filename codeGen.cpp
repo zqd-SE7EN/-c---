@@ -8,6 +8,7 @@ NameCounter programNameCounter;
 std::string computeArrayOffset(ExpressionNode *c);
 
 int VariableDeclarationNode::getSize(){
+    
     if(this->mTokenType==Node::TYPE_VOID){
         return 1;
     }
@@ -46,14 +47,18 @@ int StructDeclarationNode::getSize(){
 }
 
 std::string StructDeclarationNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     auto attribute = symbolTableStack->lookUp(mChildren[1]->getStructTypeName());
     if(attribute==NULL){
         exit(1);
     }
     attribute->size = getSize();
+    std::cout<<this->getName()<<" end"<<std::endl;
+    return "`";
 }
 
 std::string VariableDeclarationStatementNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     auto variables = mChildren[1]->getChildren();
     std::stringstream ss;
     for(auto variable : variables){
@@ -63,6 +68,7 @@ std::string VariableDeclarationStatementNode::codeGen(){
 }
 
 std::string VariableDeclarationNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     auto attribute = symbolTableStack->lookUp(this->getVariableName());
     assert(attribute!=NULL);
     attribute->size = getSize();
@@ -71,11 +77,13 @@ std::string VariableDeclarationNode::codeGen(){
 }
 
 int FunctionDeclarationNode::getSize(){
+    std::cout<<this->getName()<<std::endl;
     VariableDeclarationNode t(this);
     return t.getSize();
 }
 
 std::string FunctionDeclarationNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     auto attribute = symbolTableStack->lookUp(this->getVariableName());
     assert(attribute!=NULL);
     attribute->size = getSize();
@@ -166,6 +174,7 @@ std::string computeArrayOffset(ExpressionNode *c){
 }
 
 std::string ExpressionNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     std::string res, t1, t2;
     if(mChildren.size()==0){ // is terminal
         if(this->getKind()==Node::KIND_VARIABLE){
@@ -397,6 +406,7 @@ std::string ExpressionNode::codeGen(){
 }
 
 std::string IfNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     Node *condition = this->mChildren[1];
     Node *thenBlock = this->mChildren[2];
     Node *elseBlock = this->getChildrenById(4);
@@ -421,6 +431,7 @@ std::string IfNode::codeGen(){
 }
 
 std::string ForNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     int K=4;
     Node *kNode = new ExpressionNode(new AttributivedNode("4"));
     kNode->setVariableName("4");
@@ -486,10 +497,12 @@ std::string ForNode::codeGen(){
         program.push({"BEQ", "0", "0", loopStartLabel1});
         program.labelNextLine(afterLoopLabel);
         forexpandexp/=K;
+        return "`";
     }
 }
 
 std::string WhileNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     ExpressionNode *conditionExpression = dynamic_cast<ExpressionNode*>(this->mChildren[1]);
     Node *whileBody = this->mChildren[2];
 
@@ -509,6 +522,7 @@ std::string WhileNode::codeGen(){
 }
 
 std::string RetNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     auto table = SymbolTable::getSymbolTableByName(symbolTableStack->top()->getName())->getTable();
     std::string tober;
     if(this->mChildren.size()==1){
@@ -525,6 +539,7 @@ std::string RetNode::codeGen(){
 }
 
 std::string ReadNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     std::string dst;
     dst = this->mChildren[0]->codeGen();
     std::string type = this->mChildren[1]->getChildrenById(0)->getTokenValue();
@@ -539,6 +554,7 @@ std::string ReadNode::codeGen(){
 }
 
 std::string WriteNode::codeGen(){
+    std::cout<<this->getName()<<std::endl;
     std::string dst;
     dst = this->mChildren[0]->codeGen();
     std::string type = this->mChildren[1]->getChildrenById(0)->getTokenValue();
